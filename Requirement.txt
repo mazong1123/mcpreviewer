@@ -1,0 +1,368 @@
+MCP Reviewer
+V1 Focused Product Requirements Document
+
+Status: Draft
+Version: V1 Narrow Scope
+Owner: Founder
+
+1. Product Definition
+
+MCP Reviewer is a pull-request review bot for MCP changes.
+
+It reads MCP-related diffs in a PR and produces a single reviewer-facing outcome:
+
+Safe to merge
+Review recommended
+Manual approval required
+
+The product’s core job is not to show raw changes.
+Its core job is to turn MCP capability changes into a clear approval decision with plain-English reasoning.
+
+2. Killer Feature
+Approval Recommendation from MCP Capability Changes
+
+Given a pull request that adds or changes MCP tools, the product should:
+
+detect what new capability the agent is gaining
+classify the risk of that capability expansion
+explain the blast radius in plain English
+recommend the reviewer action
+Why this is the product
+
+The review pain is not “I cannot diff files.”
+The real pain is:
+
+“I can see files changed, but I still do not know whether this PR is safe to approve.”
+
+V1 must solve exactly that.
+
+3. Product Goal
+
+The first version should help a reviewer answer this question in under 30 seconds:
+
+Does this MCP change silently give the agent more power than we intended?
+
+If the answer is yes, the product should clearly say so and explain why.
+
+4. Target User
+Primary user
+
+A reviewer or tech lead reviewing a PR that adds or modifies an MCP server or agent tool.
+
+Secondary user
+
+A developer opening the PR and wanting to understand whether their change will trigger review.
+
+5. Problem Statement
+
+Today, reviewers often cannot tell whether an MCP-related PR introduces meaningful new power.
+
+They may see:
+
+a changed manifest
+a new tool definition
+a scope update
+a changed description
+a new config block
+
+But they still do not know:
+
+did this add write access?
+can this tool now delete data?
+can it send messages or emails?
+did OAuth scope expand?
+is this touching sensitive systems?
+should I approve this or escalate it?
+
+V1 exists to convert technical change into a review decision.
+
+6. V1 Scope
+
+V1 only includes what is necessary to deliver the approval recommendation.
+
+Included
+MCP-related file detection
+capability diffing
+capability classification
+rule-based risk scoring
+plain-English blast radius summary
+reviewer recommendation
+GitHub PR comment
+CLI output
+simple repo policy file
+Excluded
+dashboards
+runtime enforcement
+hosted SaaS
+registries
+audit history
+org-wide admin UI
+Slack/Jira workflows
+advanced analytics
+generalized vulnerability scanning
+7. Core Workflow
+Input
+
+A pull request contains MCP-related changes.
+
+System behavior
+
+The system:
+
+identifies relevant MCP files
+compares old and new MCP capabilities
+detects whether the change expands agent power
+classifies the change into risk categories
+generates a plain-English explanation
+outputs a reviewer recommendation
+Output
+
+A PR comment that tells the reviewer:
+
+what changed
+why it matters
+how risky it is
+what action to take
+8. Primary User Story
+
+As a reviewer, I want MCP changes translated into a clear approval recommendation, so I can decide whether to merge the PR without manually inspecting raw manifests and schemas.
+
+9. Functional Requirements
+9.1 MCP Change Detection
+
+The system must detect whether a PR contains MCP-related changes.
+
+Must
+identify relevant files using configurable path patterns
+ignore unrelated changes
+work in repositories with multiple folders
+Output
+list of analyzed MCP-related files
+9.2 Capability Expansion Detection
+
+The system must detect whether the proposed change gives the agent more power than before.
+
+Must detect
+new tools
+removed tools
+modified tools
+newly introduced write actions
+newly introduced delete actions
+newly introduced send/notify actions
+newly introduced execute/admin actions
+auth scope expansion
+newly introduced access to sensitive systems
+unknown or ambiguous new capabilities
+Core principle
+
+V1 is not about exhaustive diffing.
+It is about detecting meaningful expansion of power.
+
+9.3 Capability Classification
+
+Each changed or added tool must be classified into one or more categories.
+
+Initial classes
+Read
+Write
+Delete
+Send / Notify
+Execute
+Admin / Configuration
+Sensitive System Access
+Unknown
+V1 rule
+
+If the system cannot confidently understand a new capability, it must mark it as Unknown and treat it conservatively.
+
+9.4 Sensitive System Detection
+
+The system must detect whether the change affects a sensitive system type.
+
+Initial sensitive domains
+Email
+Ticketing
+Source control
+Database
+Cloud infrastructure
+Billing / payments
+CRM / customer records
+Identity / authentication
+File storage
+
+This is only needed because it influences approval recommendation.
+
+9.5 Risk Scoring
+
+The system must assign a risk level to the PR.
+
+Risk levels
+Low
+Medium
+High
+Critical
+Initial scoring rules
+
+Risk should increase when the PR introduces:
+
+write capability
+delete capability
+send capability
+admin capability
+broader scopes
+sensitive system access
+unknown behavior
+V1 design rule
+
+Risk scoring should be deterministic and rule-based.
+No opaque model-only scoring in V1.
+
+9.6 Approval Recommendation
+
+This is the main product output.
+
+The system must output one of three recommendations:
+
+Safe to merge
+Review recommended
+Manual approval required
+Default mapping
+Low → Safe to merge
+Medium → Review recommended
+High/Critical → Manual approval required
+Requirement
+
+The recommendation must always include clear reasons.
+
+Example:
+
+“Manual approval required because this PR adds ticket creation and record deletion capabilities.”
+“Review recommended because OAuth scope expanded from read-only to read/write.”
+“Safe to merge because only descriptive metadata changed and no new capabilities were introduced.”
+9.7 Blast Radius Summary
+
+The system must explain the recommendation in plain English.
+
+Output requirements
+2–5 sentences
+understandable by a reviewer who did not read the raw MCP files
+focused on power expansion, not raw syntax changes
+Example
+
+“This PR adds two new tools to the MCP server. One remains read-only, but one can create tickets. OAuth scope also expands to write access. This increases the agent’s ability to modify external systems, so manual approval is required.”
+
+9.8 GitHub PR Comment
+
+The system must post a single reviewer-friendly comment in the PR.
+
+Required structure
+Recommendation
+Risk level
+Short summary
+Key capability changes
+Reason list
+Example format
+
+Recommendation: Manual approval required
+Risk: High
+
+This PR adds one new write-capable tool and expands OAuth scope to write access. The MCP server can now create tickets in an external system. This increases the agent’s blast radius beyond read-only access.
+
+Key changes
+
+Added tool: create_ticket
+New capability: Write
+Sensitive domain: Ticketing
+Scope change: read → read/write
+
+Reason
+
+Introduces write access
+Expands external system impact
+Increases approval risk
+10. Policy File
+
+The repo may define a simple policy file that changes recommendation thresholds.
+
+V1 supported rules
+require manual approval for Delete
+require manual approval for Send
+treat Email as high risk
+treat Billing as critical
+ignore description-only changes
+fail CI for High or above
+Design rule
+
+The policy file exists only to tune approval behavior.
+It should not become a full policy engine in V1.
+
+11. CLI Requirements
+
+The CLI must support local testing of the same logic used in PR review.
+
+Must support
+local diff analysis
+text output
+JSON output
+exit codes based on recommendation or threshold
+Purpose
+
+The CLI is for developers and debugging.
+The GitHub PR experience is still the main product surface.
+
+12. Non-Functional Requirements
+Speed
+
+Typical PR analysis should finish within 30 seconds.
+
+Explainability
+
+A reviewer must always be able to see why the recommendation was produced.
+
+Safety
+
+If parsing is incomplete or ambiguous, the system should lean conservative.
+
+Stability
+
+The same input should produce the same recommendation.
+
+13. Success Criteria
+
+V1 succeeds if reviewers start treating the product as a reliable approval assistant.
+
+Product success signals
+reviewers understand the recommendation without reading raw manifests
+risky MCP changes are flagged before merge
+low-risk changes move faster
+users trust the recommendation enough to rely on it during review
+Early validation metric
+
+A pilot user should be able to look at the PR comment and answer:
+“Yes, I know whether I should approve this.”
+
+14. What V1 Must Not Become
+
+To protect the wedge, V1 must not drift into:
+
+generic MCP diff viewer
+general governance platform
+runtime security tool
+observability product
+hosted enterprise control plane
+
+If a feature does not strengthen the approval recommendation workflow, it should be deferred.
+
+15. Positioning
+
+MCP Reviewer is the review bot that turns MCP changes into approval decisions.
+
+Not:
+
+“an MCP governance platform”
+“an MCP scanner”
+“an MCP registry”
+“an MCP security suite”
+16. One-Sentence Requirement Summary
+
+V1 must help a PR reviewer decide whether an MCP change is safe to approve by converting capability expansion into a clear, explainable recommendation.
