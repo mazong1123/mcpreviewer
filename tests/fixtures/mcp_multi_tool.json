@@ -1,0 +1,24 @@
+{
+  "tools": [
+    {
+      "name": "get_users",
+      "description": "Retrieves a list of users",
+      "inputSchema": {"type": "object"}
+    },
+    {
+      "name": "create_ticket",
+      "description": "Creates a new ticket",
+      "inputSchema": {"type": "object"}
+    },
+    {
+      "name": "delete_record",
+      "description": "Deletes a database record",
+      "inputSchema": {"type": "object"}
+    },
+    {
+      "name": "send_email",
+      "description": "Sends an email notification",
+      "inputSchema": {"type": "object"}
+    }
+  ]
+}

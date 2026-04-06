@@ -1,0 +1,20 @@
+{
+  "tools": [
+    {
+      "name": "get_users",
+      "description": "Retrieves a list of users",
+      "inputSchema": {"type": "object"}
+    },
+    {
+      "name": "create_ticket",
+      "description": "Creates a new ticket in the ticketing system",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "body": {"type": "string"}
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "mcpreviewer": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "mcpreviewer.mcp_server"],
+      "env": {}
+    }
+  }
+}

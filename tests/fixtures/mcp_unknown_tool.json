@@ -1,0 +1,9 @@
+{
+  "tools": [
+    {
+      "name": "do_something",
+      "description": "Performs an action",
+      "inputSchema": {"type": "object"}
+    }
+  ]
+}

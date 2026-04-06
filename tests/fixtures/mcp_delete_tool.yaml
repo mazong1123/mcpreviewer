@@ -1,0 +1,8 @@
+tools:
+  - name: delete_record
+    description: "Deletes a database record permanently"
+    inputSchema:
+      type: object
+      properties:
+        record_id:
+          type: string

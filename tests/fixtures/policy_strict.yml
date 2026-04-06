@@ -1,0 +1,13 @@
+version: 1
+
+rules:
+  - capability: Delete
+    min_risk: Critical
+  - domain: Email
+    min_risk: High
+  - domain: Billing / payments
+    min_risk: Critical
+
+options:
+  ignore_description_only: true
+  fail_ci_threshold: High

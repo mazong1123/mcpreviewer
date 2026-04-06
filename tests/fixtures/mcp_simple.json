@@ -1,0 +1,14 @@
+{
+  "tools": [
+    {
+      "name": "get_users",
+      "description": "Retrieves a list of users",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {"type": "integer"}
+        }
+      }
+    }
+  ]
+}

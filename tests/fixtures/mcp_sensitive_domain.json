@@ -1,0 +1,9 @@
+{
+  "tools": [
+    {
+      "name": "charge_customer",
+      "description": "Charges a customer via Stripe billing API",
+      "inputSchema": {"type": "object"}
+    }
+  ]
+}

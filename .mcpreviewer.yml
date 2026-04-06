@@ -1,0 +1,13 @@
+version: 1
+patterns:
+  - "**/*.json"
+  - "**/mcp.json"
+  - "**/.cursor/mcp.json"
+rules:
+  - capability: Execute
+    min_risk: High
+  - domain: Billing
+    min_risk: High
+options:
+  ignore_description_only: false
+  fail_ci_threshold: Medium
