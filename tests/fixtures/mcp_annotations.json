@@ -1,0 +1,12 @@
+{
+  "tools": [
+    {
+      "name": "delete_record",
+      "description": "Deletes a database record",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true
+      }
+    }
+  ]
+}

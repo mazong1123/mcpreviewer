@@ -1,0 +1,21 @@
+# .mcpreviewer.yml example
+version: 1
+
+patterns:
+  - "**/mcp.json"
+  - "**/mcp.yaml"
+  - "**/mcp.yml"
+
+rules:
+  - capability: Delete
+    min_risk: Critical
+  - capability: Send
+    min_risk: High
+  - domain: Email
+    min_risk: High
+  - domain: Billing
+    min_risk: Critical
+
+options:
+  ignore_description_only: true
+  fail_ci_threshold: High

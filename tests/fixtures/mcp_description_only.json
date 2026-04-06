@@ -1,0 +1,9 @@
+{
+  "tools": [
+    {
+      "name": "get_users",
+      "description": "Gets all users from the system (updated wording)",
+      "inputSchema": {"type": "object"}
+    }
+  ]
+}
