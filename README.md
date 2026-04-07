@@ -8,7 +8,7 @@ MCP Reviewer is a pull-request review bot that analyzes MCP (Model Context Proto
 - **Review recommended** — moderate changes worth a closer look
 - **Manual approval required** — the PR introduces meaningful new agent power
 
-MCP Reviewer works as a **GitHub App** that posts comments on pull requests, and as a **CLI** for local testing.
+MCP Reviewer works as a **GitHub Actions workflow** that posts comments on pull requests, and as a **CLI** for local testing.
 
 ---
 
@@ -25,10 +25,6 @@ pip install -e .
 ```bash
 mcpreviewer analyze --base origin/main --head HEAD
 ```
-
-### Deploy the GitHub App
-
-See [Deployment Guide](#deployment-guide) below.
 
 ---
 
@@ -421,79 +417,16 @@ options:
 
 ---
 
-## Deployment Guide
-
-### 1. Register a GitHub App
-
-Go to **GitHub → Settings → Developer settings → GitHub Apps → New GitHub App**.
-
-Configure:
-- **Webhook URL:** `https://your-domain.com/webhook`
-- **Webhook secret:** Generate a strong random string
-- **Permissions:**
-  - Pull requests: **Read & write**
-  - Contents: **Read-only**
-- **Subscribe to events:** Pull request
-
-Download the private key (.pem file).
-
-### 2. Set environment variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `GITHUB_APP_ID` | Yes | Your GitHub App's ID |
-| `GITHUB_PRIVATE_KEY` | Yes | PEM-encoded private key (full multi-line string) |
-| `GITHUB_WEBHOOK_SECRET` | Yes | The webhook secret you configured |
-| `LOG_LEVEL` | No | `DEBUG`, `INFO` (default), `WARNING`, `ERROR` |
-| `PORT` | No | Server port (default: `8000`) |
-
-### 3. Deploy
-
-#### Docker
-
-```bash
-docker build -t mcpreviewer .
-docker run -p 8000:8000 \
-  -e GITHUB_APP_ID=12345 \
-  -e GITHUB_PRIVATE_KEY="$(cat private-key.pem)" \
-  -e GITHUB_WEBHOOK_SECRET=your_secret \
-  mcpreviewer
-```
-
-#### Fly.io
-
-```bash
-fly launch
-fly secrets set GITHUB_APP_ID=12345
-fly secrets set GITHUB_PRIVATE_KEY="$(cat private-key.pem)"
-fly secrets set GITHUB_WEBHOOK_SECRET=your_secret
-fly deploy
-```
-
-#### Railway / Render / any container platform
-
-Set the environment variables in the platform dashboard and deploy the Docker image.
-
-### 4. Install the app
-
-Go to your GitHub App's page → **Install App** → select the repositories you want to monitor.
-
-### 5. Verify
-
-Open a PR that modifies an MCP config file. MCP Reviewer should post a comment within a few seconds.
-
----
-
 ## Architecture Overview
 
 ```
 GitHub PR Event
       │
       ▼
-  Webhook Handler (FastAPI)
+  GitHub Actions Workflow
       │
       ▼
-  Analysis Engine (shared core)
+  CLI / Analysis Engine
       │
       ├── Detector  → finds MCP files
       ├── Parser    → normalizes manifests
@@ -504,10 +437,10 @@ GitHub PR Event
       └── Summarizer → generates plain-English summary
       │
       ▼
-  PR Comment (posted via GitHub API)
+  PR Comment (posted via GitHub Actions)
 ```
 
-The same analysis engine powers both the GitHub App and the CLI. No database, no persistent state — GitHub is the system of record.
+No database, no persistent state — GitHub is the system of record.
 
 ---
 
@@ -525,7 +458,7 @@ A: No. It posts one comment and updates it on subsequent pushes.
 **Q: What if there are no MCP files in the PR?**
 A: MCP Reviewer stays silent — no comment is posted.
 
-**Q: Can I use it in CI without the GitHub App?**
+**Q: Can I use it in CI?**
 A: Yes! The recommended approach is the [GitHub Actions workflow](#setup-automatic-pr-reviews-github-actions) — no server needed. You can also use the CLI with `--fail-on` to gate your CI pipeline:
 ```bash
 mcpreviewer analyze --fail-on high
@@ -540,8 +473,7 @@ A: Yes. The detector scans all changed files across the entire repo using glob p
 
 | Problem | Solution |
 |---|---|
-| No comment posted on PR | Check that the GitHub App is installed on the repo, webhook URL is correct, and MCP files match the detection patterns |
-| Webhook returns 401 | Verify `GITHUB_WEBHOOK_SECRET` matches the secret configured in the GitHub App |
+| No comment posted on PR | Check that the workflow file exists at `.github/workflows/mcpreviewer.yml`, the PR touches MCP config files, and the workflow has `pull-requests: write` permission |
 | CLI says "No changed files found" | Make sure `--base` and `--head` are valid git refs with actual differences |
 | False positive (flagged as risky but safe) | Add a `.mcpreviewer.yml` policy file to tune thresholds, or use `ignore_description_only: true` |
 | False negative (missed risky change) | Add a policy rule to escalate specific capabilities or domains |
