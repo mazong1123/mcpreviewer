@@ -1,8 +1,76 @@
-# MCP Reviewer — Product Manual
+# MCP Reviewer
+
+**Automated risk analysis for MCP configuration changes in pull requests.**
+
+MCP Reviewer is a GitHub Actions bot that analyzes MCP (Model Context Protocol) configuration changes and tells reviewers whether a PR is safe to merge. Instead of manually reading raw manifests and tool definitions, reviewers get a clear, actionable recommendation.
+
+## See It in Action
+
+Every example below is a **real PR** in this repo with a **real bot comment** — click through to see them live.
+
+### 🟡 Medium Risk — Unknown tool added
+
+> **PR:** [Example: Add weather MCP server (Low Risk)](https://github.com/mazong1123/mcpreviewer/pull/7)
+
+Adding a weather server that can't be confidently classified:
+
+> ## 🟡 MCP Reviewer
+>
+> **Recommendation:** Review recommended
+> **Risk:** Medium (2 points)
+>
+> This PR adds 1 new tool in the MCP configuration. Reviewer attention is recommended before merging.
+>
+> | Change | Tool | Capabilities | Sensitive Domains |
+> |--------|------|-------------|------------------|
+> | added | `weather` | Unknown | - |
+>
+> **Reasons:** Contains unknown or ambiguous capability
+
+### 🟠 High Risk — Database access with production credentials
+
+> **PR:** [Example: Add postgres manager MCP server (High Risk)](https://github.com/mazong1123/mcpreviewer/pull/8)
+
+Adding a postgres server pointing at a production database:
+
+> ## 🟠 MCP Reviewer
+>
+> **Recommendation:** Manual approval required
+> **Risk:** High (5 points)
+>
+> This PR adds 1 new tool in the MCP configuration. This affects sensitive systems: Database, Identity / authentication. Manual approval is required due to the scope of capability expansion.
+>
+> | Change | Tool | Capabilities | Sensitive Domains |
+> |--------|------|-------------|------------------|
+> | added | `postgres-manager` | Admin / Configuration, Sensitive System Access | Database, Identity / authentication |
+>
+> **Reasons:** Introduces admin/configuration capability · Affects sensitive systems: Database, Identity / authentication
+
+### 🔴 Critical Risk — Shell execution + billing access
+
+> **PR:** [Example: Add shell executor and Stripe billing (Critical Risk)](https://github.com/mazong1123/mcpreviewer/pull/9)
+
+Adding a shell executor (arbitrary commands) and a Stripe billing server:
+
+> ## 🟠 MCP Reviewer
+>
+> **Recommendation:** Manual approval required
+> **Risk:** High (5 points)
+>
+> This PR adds 2 new tools in the MCP configuration. Among the changes, 1 tool can execute commands. This affects sensitive systems: Billing / payments, Identity / authentication. Manual approval is required due to the scope of capability expansion.
+>
+> | Change | Tool | Capabilities | Sensitive Domains |
+> |--------|------|-------------|------------------|
+> | added | `shell-executor` | Execute | - |
+> | added | `stripe-billing` | Sensitive System Access | Billing / payments, Identity / authentication |
+>
+> **Reasons:** Introduces execute capability · Affects sensitive systems: Billing / payments, Identity / authentication
+
+---
 
 ## What is MCP Reviewer?
 
-MCP Reviewer is a pull-request review bot that analyzes MCP (Model Context Protocol) configuration changes and tells reviewers whether a PR is safe to merge. Instead of manually reading raw manifests and tool definitions, reviewers get a clear recommendation:
+MCP Reviewer analyzes MCP configuration changes and produces a clear recommendation:
 
 - **Safe to merge** — no significant capability expansion
 - **Review recommended** — moderate changes worth a closer look
