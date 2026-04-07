@@ -38,22 +38,28 @@ jobs:
           echo "Changed files:"
           git diff --name-only origin/${{ github.base_ref }}...pr-head || true
 
-          # Analyze the diff between the PR base and head
+          echo "--- Testing import ---"
+          python -c "from mcpreviewer.cli.main import analyze_cmd; print('Import OK')"
+
+          echo "--- Running JSON analysis ---"
           python -m mcpreviewer.cli.main \
             --base origin/${{ github.base_ref }} \
             --head pr-head \
-            --format json > /tmp/mcpreviewer_result.json 2>&1 || true
+            --format json > /tmp/mcpreviewer_result.json 2>/tmp/mcpreviewer_err1.txt || true
+          echo "JSON stderr:"
+          cat /tmp/mcpreviewer_err1.txt || true
+          echo "JSON stdout:"
+          cat /tmp/mcpreviewer_result.json || true
 
+          echo "--- Running text analysis ---"
           python -m mcpreviewer.cli.main \
             --base origin/${{ github.base_ref }} \
             --head pr-head \
-            --format text > /tmp/mcpreviewer_comment.txt 2>&1 || true
-
-          echo "JSON output:"
-          cat /tmp/mcpreviewer_result.json
-          echo ""
-          echo "Text output:"
-          cat /tmp/mcpreviewer_comment.txt
+            --format text > /tmp/mcpreviewer_comment.txt 2>/tmp/mcpreviewer_err2.txt || true
+          echo "Text stderr:"
+          cat /tmp/mcpreviewer_err2.txt || true
+          echo "Text stdout:"
+          cat /tmp/mcpreviewer_comment.txt || true
 
       - name: Post or update PR comment
         uses: actions/github-script@v7

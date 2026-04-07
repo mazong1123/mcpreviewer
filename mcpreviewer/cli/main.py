@@ -199,3 +199,7 @@ def _parse_risk_level(value: str) -> RiskLevel:
 
 def _risk_meets_threshold(actual: RiskLevel, threshold: RiskLevel) -> bool:
     return RISK_ORDER[actual] >= RISK_ORDER[threshold]
+
+
+if __name__ == "__main__":
+    analyze_cmd()
