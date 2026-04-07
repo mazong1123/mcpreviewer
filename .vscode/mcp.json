@@ -5,6 +5,28 @@
       "command": "python",
       "args": ["-m", "mcpreviewer.mcp_server"],
       "env": {}
+    },
+    "email-sender": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@example/email-mcp-server"],
+      "env": {
+        "SMTP_HOST": "smtp.company.com",
+        "SMTP_USER": "bot@company.com",
+        "ALLOW_SEND_EMAIL": "true",
+        "ALLOW_SEND_BULK": "true"
+      }
+    },
+    "postgres-query": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@example/postgres-mcp-server"],
+      "env": {
+        "DATABASE_URL": "postgresql://readonly:secret@db.internal:5432/analytics",
+        "ALLOW_QUERY": "true",
+        "ALLOW_CREATE_TABLE": "true",
+        "ALLOW_DROP_TABLE": "true"
+      }
     }
   }
 }
