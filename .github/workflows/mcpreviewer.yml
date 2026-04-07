@@ -12,14 +12,15 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR head
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Fetch base branch
-        run: git fetch origin ${{ github.base_ref }}
+      - name: Fetch PR head and base refs
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-head
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -33,19 +34,19 @@ jobs:
         id: review
         run: |
           echo "Base ref: origin/${{ github.base_ref }}"
-          echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
+          echo "PR head ref: pr-head"
           echo "Changed files:"
-          git diff --name-only origin/${{ github.base_ref }}...${{ github.event.pull_request.head.sha }} || git diff --name-only origin/${{ github.base_ref }} ${{ github.event.pull_request.head.sha }}
+          git diff --name-only origin/${{ github.base_ref }}...pr-head || true
 
           # Analyze the diff between the PR base and head
           python -m mcpreviewer.cli.main \
             --base origin/${{ github.base_ref }} \
-            --head ${{ github.event.pull_request.head.sha }} \
+            --head pr-head \
             --format json > /tmp/mcpreviewer_result.json 2>&1 || true
 
           python -m mcpreviewer.cli.main \
             --base origin/${{ github.base_ref }} \
-            --head ${{ github.event.pull_request.head.sha }} \
+            --head pr-head \
             --format text > /tmp/mcpreviewer_comment.txt 2>&1 || true
 
           echo "JSON output:"
