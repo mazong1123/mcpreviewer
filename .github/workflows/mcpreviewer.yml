@@ -23,7 +23,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install MCP Reviewer
-        run: pip install mcpreviewer
+        run: pip install -e .
 
       - name: Run MCP Reviewer
         id: review
