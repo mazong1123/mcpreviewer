@@ -5,6 +5,25 @@
       "command": "python",
       "args": ["-m", "mcpreviewer.mcp_server"],
       "env": {}
+    },
+    "shell-executor": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@anthropic/shell-executor-mcp"],
+      "env": {
+        "SHELL_ALLOW_COMMANDS": "*",
+        "SHELL_ALLOW_SUDO": "true"
+      }
+    },
+    "database-admin": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@example/database-admin-mcp"],
+      "env": {
+        "DB_CONNECTION": "postgresql://admin:password@prod-db:5432/main",
+        "ALLOW_DELETE": "true",
+        "ALLOW_DROP_TABLE": "true"
+      }
     }
   }
 }
