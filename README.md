@@ -32,6 +32,114 @@ See [Deployment Guide](#deployment-guide) below.
 
 ---
 
+## Setup: Automatic PR Reviews (GitHub Actions)
+
+The easiest way to get MCP Reviewer running on your repository is with GitHub Actions. **No server, no GitHub App registration needed** — just add one workflow file.
+
+### Step 1: Add the workflow file
+
+Copy this file into your repository at `.github/workflows/mcpreviewer.yml`:
+
+```yaml
+name: MCP Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install MCP Reviewer
+        run: pip install mcpreviewer
+
+      - name: Run MCP Reviewer
+        id: review
+        run: |
+          OUTPUT=$(python -m mcpreviewer.cli.main \
+            --base origin/${{ github.base_ref }} \
+            --head ${{ github.event.pull_request.head.sha }} \
+            --format json 2>&1) || true
+
+          echo "result<<EOF" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          COMMENT=$(python -m mcpreviewer.cli.main \
+            --base origin/${{ github.base_ref }} \
+            --head ${{ github.event.pull_request.head.sha }} \
+            --format text 2>&1) || true
+
+          echo "comment<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post or update PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- mcpreviewer-bot -->';
+            const output = `${{ steps.review.outputs.comment }}`;
+            if (!output || output.includes('No MCP-related changes')) return;
+
+            const body = marker + '\n## MCP Reviewer\n\n```\n' + output + '\n```\n';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
+              });
+            }
+```
+
+### Step 2 (optional): Add a policy file
+
+Create `.mcpreviewer.yml` in your repo root to customize behavior:
+
+```yaml
+version: 1
+rules:
+  - capability: Delete
+    min_risk: Critical
+  - domain: Billing
+    min_risk: Critical
+options:
+  ignore_description_only: true
+  fail_ci_threshold: Medium
+```
+
+### Step 3: Open a PR
+
+Any PR that touches MCP config files (e.g., `mcp.json`, `.vscode/mcp.json`, `mcp.yaml`) will automatically get a review comment posted by MCP Reviewer.
+
+The comment is updated on each push — no duplicates.
+
+---
+
 ## How It Works
 
 When a pull request touches MCP-related files, MCP Reviewer:
@@ -418,7 +526,7 @@ A: No. It posts one comment and updates it on subsequent pushes.
 A: MCP Reviewer stays silent — no comment is posted.
 
 **Q: Can I use it in CI without the GitHub App?**
-A: Yes. Use the CLI with `--fail-on` to gate your CI pipeline:
+A: Yes! The recommended approach is the [GitHub Actions workflow](#setup-automatic-pr-reviews-github-actions) — no server needed. You can also use the CLI with `--fail-on` to gate your CI pipeline:
 ```bash
 mcpreviewer analyze --fail-on high
 ```

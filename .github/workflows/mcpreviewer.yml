@@ -1,0 +1,172 @@
+name: MCP Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install MCP Reviewer
+        run: pip install mcpreviewer
+
+      - name: Run MCP Reviewer
+        id: review
+        run: |
+          # Analyze the diff between the PR base and head
+          OUTPUT=$(python -m mcpreviewer.cli.main \
+            --base origin/${{ github.base_ref }} \
+            --head ${{ github.event.pull_request.head.sha }} \
+            --format json 2>&1) || true
+
+          echo "result<<EOF" >> $GITHUB_OUTPUT
+          echo "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Also generate the markdown comment
+          COMMENT=$(python -m mcpreviewer.cli.main \
+            --base origin/${{ github.base_ref }} \
+            --head ${{ github.event.pull_request.head.sha }} \
+            --format text 2>&1) || true
+
+          echo "comment<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post or update PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- mcpreviewer-bot -->';
+            const reviewOutput = `${{ steps.review.outputs.comment }}`;
+
+            // Skip if no MCP changes detected
+            if (!reviewOutput || reviewOutput.includes('No MCP-related changes') || reviewOutput.includes('No changed files')) {
+              console.log('No MCP changes detected, cleaning up any existing comment');
+              // Delete existing bot comment if present
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+              const existing = comments.find(c => c.body.includes(marker));
+              if (existing) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                });
+              }
+              return;
+            }
+
+            // Build the comment body with the full markdown review
+            let body = marker + '\n';
+
+            // Parse JSON result if available for structured output
+            const jsonOutput = `${{ steps.review.outputs.result }}`;
+            let result = null;
+            try {
+              result = JSON.parse(jsonOutput);
+            } catch (e) {
+              // Fall back to text output
+            }
+
+            if (result && result.recommendation) {
+              // Build structured markdown comment
+              const riskEmoji = {
+                'Low': '🟢',
+                'Medium': '🟡',
+                'High': '🟠',
+                'Critical': '🔴'
+              };
+              const emoji = riskEmoji[result.risk_level] || '⚪';
+
+              body += `## ${emoji} MCP Reviewer\n\n`;
+              body += `**Recommendation:** ${result.recommendation}\n`;
+              body += `**Risk:** ${result.risk_level} (${result.total_points} points)\n\n`;
+              body += `${result.summary}\n\n`;
+
+              if (result.tool_changes && result.tool_changes.length > 0) {
+                body += '### Key Changes\n\n';
+                body += '| Change | Tool | Capabilities | Sensitive Domains |\n';
+                body += '|--------|------|-------------|------------------|\n';
+                for (const tc of result.tool_changes) {
+                  const caps = tc.capabilities.join(', ') || '-';
+                  const domains = tc.sensitive_domains.join(', ') || '-';
+                  body += `| ${tc.change_type} | \`${tc.tool_name}\` | ${caps} | ${domains} |\n`;
+                }
+                body += '\n';
+              }
+
+              if (result.scope_changes && result.scope_changes.length > 0) {
+                body += '### Scope Changes\n\n';
+                body += '| Scope | Old | New | Expansion |\n';
+                body += '|-------|-----|-----|----------|\n';
+                for (const sc of result.scope_changes) {
+                  body += `| ${sc.scope_name} | ${sc.old_access || '-'} | ${sc.new_access || '-'} | ${sc.is_expansion ? '⚠️ Yes' : 'No'} |\n`;
+                }
+                body += '\n';
+              }
+
+              if (result.reasons && result.reasons.length > 0) {
+                body += '### Reasons\n\n';
+                for (const r of result.reasons) {
+                  body += `- ${r}\n`;
+                }
+                body += '\n';
+              }
+
+              body += `\n<details><summary>Analyzed files</summary>\n\n`;
+              for (const f of (result.analyzed_files || [])) {
+                body += `- \`${f}\`\n`;
+              }
+              body += `\n</details>\n\n`;
+              body += '---\n*MCP Reviewer v1*\n';
+            } else {
+              // Fallback: use text output directly
+              body += '## MCP Reviewer\n\n';
+              body += '```\n' + reviewOutput + '\n```\n';
+              body += '\n---\n*MCP Reviewer v1*\n';
+            }
+
+            // Find existing bot comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: body,
+              });
+              console.log(`Updated existing comment ${existing.id}`);
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+              console.log('Created new review comment');
+            }
