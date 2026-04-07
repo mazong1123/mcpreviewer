@@ -56,6 +56,7 @@ def analyze_mcp_change(
     base_content: str = "",
     head_content: str = "",
     policy_content: str = "",
+    classifier: str = "rule-based",
 ) -> str:
     """Analyze an MCP configuration change and return a review recommendation.
 
@@ -68,6 +69,7 @@ def analyze_mcp_change(
         base_content: Content of the file BEFORE the change. Empty string if the file is new.
         head_content: Content of the file AFTER the change. Empty string if the file is deleted.
         policy_content: Optional repo policy YAML content to customize thresholds.
+        classifier: Classification strategy: "rule-based" (default) or "llm".
 
     Returns:
         JSON string with recommendation, risk level, summary, tool changes, and reasons.
@@ -80,6 +82,7 @@ def analyze_mcp_change(
         changed_files=[file_path],
         file_contents={file_path: (base, head)},
         policy_content=policy,
+        classifier=classifier,
     )
 
     if result is None:
@@ -94,6 +97,7 @@ def render_review_comment(
     base_content: str = "",
     head_content: str = "",
     policy_content: str = "",
+    classifier: str = "rule-based",
 ) -> str:
     """Analyze an MCP change and return a formatted Markdown PR comment.
 
@@ -105,6 +109,7 @@ def render_review_comment(
         base_content: Content of the file BEFORE the change. Empty string if new.
         head_content: Content of the file AFTER the change. Empty string if deleted.
         policy_content: Optional repo policy YAML content.
+        classifier: Classification strategy: "rule-based" (default) or "llm".
 
     Returns:
         Markdown-formatted review comment, or a message if no MCP changes found.
@@ -117,6 +122,7 @@ def render_review_comment(
         changed_files=[file_path],
         file_contents={file_path: (base, head)},
         policy_content=policy,
+        classifier=classifier,
     )
 
     if result is None:
@@ -130,6 +136,7 @@ def analyze_git_diff(
     repo_path: str = ".",
     base_ref: str = "HEAD~1",
     head_ref: str = "HEAD",
+    classifier: str = "rule-based",
 ) -> str:
     """Analyze MCP changes between two git refs in a local repository.
 
@@ -140,6 +147,7 @@ def analyze_git_diff(
         repo_path: Path to the git repository (default: current directory).
         base_ref: Base git reference (default: HEAD~1).
         head_ref: Head git reference (default: HEAD).
+        classifier: Classification strategy: "rule-based" (default) or "llm".
 
     Returns:
         JSON string with the review result, or a message if no MCP changes found.
@@ -178,6 +186,7 @@ def analyze_git_diff(
         changed_files=changed_files,
         file_contents=file_contents,
         policy_content=policy_content,
+        classifier=classifier,
     )
 
     if analysis is None:

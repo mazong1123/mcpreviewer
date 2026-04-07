@@ -5,6 +5,7 @@ import logging
 from mcpreviewer.core.classifier import classify_all
 from mcpreviewer.core.detector import detect_mcp_files
 from mcpreviewer.core.differ import diff_manifests, merge_diffs
+from mcpreviewer.core.llm_classifier import llm_classify_all
 from mcpreviewer.core.parser import parse_mcp_file
 from mcpreviewer.core.policy import load_policy
 from mcpreviewer.core.recommender import recommend
@@ -19,6 +20,7 @@ def analyze(
     changed_files: list[str],
     file_contents: dict[str, tuple[str | None, str | None]],
     policy_content: str | None = None,
+    classifier: str = "rule-based",
 ) -> ReviewResult | None:
     """Run the full analysis pipeline.
 
@@ -26,6 +28,7 @@ def analyze(
         changed_files: All changed file paths in the PR.
         file_contents: ``{path: (base_content, head_content)}``.
         policy_content: Raw content of the repo policy file, or ``None``.
+        classifier: ``"rule-based"`` (default) or ``"llm"``.
 
     Returns:
         A :class:`ReviewResult`, or ``None`` when no MCP files were found.
@@ -62,7 +65,11 @@ def analyze(
         diffs.append(diff)
 
     merged = merge_diffs(diffs)
-    merged.tool_changes = classify_all(merged.tool_changes)
+
+    if classifier == "llm":
+        merged.tool_changes = llm_classify_all(merged.tool_changes)
+    else:
+        merged.tool_changes = classify_all(merged.tool_changes)
 
     scoring = score(merged, policy)
     recommendation, reasons = recommend(scoring, merged)

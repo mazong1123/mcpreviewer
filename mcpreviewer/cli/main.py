@@ -26,13 +26,20 @@ RISK_ORDER = {
 @click.option("--format", "output_format", default="text", type=click.Choice(["text", "json"]))
 @click.option("--policy", "policy_path", default=None, type=click.Path(), help="Policy file path")
 @click.option(
+    "--classifier",
+    "classifier",
+    default="rule-based",
+    type=click.Choice(["rule-based", "llm"]),
+    help="Classification strategy: rule-based (default) or llm",
+)
+@click.option(
     "--fail-on",
     "fail_on",
     default=None,
     type=click.Choice(["low", "medium", "high", "critical"]),
     help="Exit non-zero at this risk level or above",
 )
-def analyze_cmd(base: str, head: str, repo: str, output_format: str, policy_path: str | None, fail_on: str | None):
+def analyze_cmd(base: str, head: str, repo: str, output_format: str, policy_path: str | None, classifier: str, fail_on: str | None):
     """Analyze MCP changes between two git refs."""
     repo_path = Path(repo).resolve()
 
@@ -59,7 +66,7 @@ def analyze_cmd(base: str, head: str, repo: str, output_format: str, policy_path
                 policy_content = p.read_text(encoding="utf-8")
                 break
 
-    result = analyze(changed_files, file_contents, policy_content)
+    result = analyze(changed_files, file_contents, policy_content, classifier=classifier)
 
     if result is None:
         click.echo("No MCP-related changes detected.")
