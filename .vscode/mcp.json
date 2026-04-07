@@ -5,6 +5,17 @@
       "command": "python",
       "args": ["-m", "mcpreviewer.mcp_server"],
       "env": {}
+    },
+    "github-issues": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@example/github-issues-mcp"],
+      "env": {
+        "GITHUB_TOKEN": "ghp_xxx",
+        "ALLOW_CREATE_ISSUE": "true",
+        "ALLOW_CLOSE_ISSUE": "true",
+        "ALLOW_ASSIGN": "true"
+      }
     }
   }
 }
