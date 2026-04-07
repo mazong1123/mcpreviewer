@@ -5,6 +5,14 @@
       "command": "python",
       "args": ["-m", "mcpreviewer.mcp_server"],
       "env": {}
+    },
+    "file-manager": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@anthropic/file-manager-mcp"],
+      "env": {
+        "ALLOWED_DIRS": "/home/user/documents,/tmp"
+      }
     }
   }
 }
