@@ -5,6 +5,14 @@
       "command": "python",
       "args": ["-m", "mcpreviewer.mcp_server"],
       "env": {}
+    },
+    "postgres-manager": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@anthropic/postgres-mcp"],
+      "env": {
+        "DATABASE_URL": "postgresql://admin:secret@prod-db.internal:5432/main"
+      }
     }
   }
 }
