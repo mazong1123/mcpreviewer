@@ -119,10 +119,15 @@ jobs:
   review:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR head
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Fetch PR head and base refs
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-head
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -130,38 +135,77 @@ jobs:
           python-version: "3.12"
 
       - name: Install MCP Reviewer
-        run: pip install -e .
+        run: pip install git+https://github.com/mazong1123/mcpreviewer.git
 
       - name: Run MCP Reviewer
-        id: review
         run: |
-          OUTPUT=$(python -m mcpreviewer.cli.main \
+          python -m mcpreviewer.cli.main \
             --base origin/${{ github.base_ref }} \
-            --head ${{ github.event.pull_request.head.sha }} \
-            --format json 2>&1) || true
+            --head pr-head \
+            --format json > /tmp/mcpreviewer_result.json 2>/dev/null || true
 
-          echo "result<<EOF" >> $GITHUB_OUTPUT
-          echo "$OUTPUT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          COMMENT=$(python -m mcpreviewer.cli.main \
+          python -m mcpreviewer.cli.main \
             --base origin/${{ github.base_ref }} \
-            --head ${{ github.event.pull_request.head.sha }} \
-            --format text 2>&1) || true
-
-          echo "comment<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+            --head pr-head \
+            --format text > /tmp/mcpreviewer_comment.txt 2>/dev/null || true
 
       - name: Post or update PR comment
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const marker = '<!-- mcpreviewer-bot -->';
-            const output = `${{ steps.review.outputs.comment }}`;
-            if (!output || output.includes('No MCP-related changes')) return;
 
-            const body = marker + '\n## MCP Reviewer\n\n```\n' + output + '\n```\n';
+            let textOutput = '';
+            let jsonOutput = '';
+            try { textOutput = fs.readFileSync('/tmp/mcpreviewer_comment.txt', 'utf8').trim(); } catch (e) {}
+            try { jsonOutput = fs.readFileSync('/tmp/mcpreviewer_result.json', 'utf8').trim(); } catch (e) {}
+
+            if (!textOutput || textOutput.includes('No MCP-related changes') || textOutput.includes('No changed files')) {
+              return;
+            }
+
+            let body = marker + '\n';
+            let result = null;
+            try { result = JSON.parse(jsonOutput); } catch (e) {}
+
+            if (result && result.recommendation) {
+              const riskEmoji = { 'Low': '🟢', 'Medium': '🟡', 'High': '🟠', 'Critical': '🔴' };
+              const emoji = riskEmoji[result.risk_level] || '⚪';
+              body += `## ${emoji} MCP Reviewer\n\n`;
+              body += `**Recommendation:** ${result.recommendation}\n`;
+              body += `**Risk:** ${result.risk_level} (${result.total_points} points)\n\n`;
+              body += `${result.summary}\n\n`;
+
+              if (result.tool_changes && result.tool_changes.length > 0) {
+                body += '### Key Changes\n\n';
+                body += '| Change | Tool | Capabilities | Sensitive Domains |\n';
+                body += '|--------|------|-------------|------------------|\n';
+                for (const tc of result.tool_changes) {
+                  const caps = tc.capabilities.join(', ') || '-';
+                  const domains = tc.sensitive_domains.join(', ') || '-';
+                  body += `| ${tc.change_type} | \`${tc.tool_name}\` | ${caps} | ${domains} |\n`;
+                }
+                body += '\n';
+              }
+
+              if (result.reasons && result.reasons.length > 0) {
+                body += '### Reasons\n\n';
+                for (const r of result.reasons) {
+                  body += `- ${r}\n`;
+                }
+                body += '\n';
+              }
+
+              body += `\n<details><summary>Analyzed files</summary>\n\n`;
+              for (const f of (result.analyzed_files || [])) {
+                body += `- \`${f}\`\n`;
+              }
+              body += `\n</details>\n\n---\n*MCP Reviewer v1*\n`;
+            } else {
+              body += '## MCP Reviewer\n\n```\n' + textOutput + '\n```\n';
+            }
+
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo,
               issue_number: context.issue.number,
