@@ -4,6 +4,18 @@
 
 MCP Reviewer is a GitHub Actions bot that analyzes MCP (Model Context Protocol) configuration changes and tells reviewers whether a PR is safe to merge. Instead of manually reading raw manifests and tool definitions, reviewers get a clear, actionable recommendation.
 
+---
+
+## What is MCP Reviewer?
+
+MCP Reviewer analyzes MCP configuration changes and produces a clear recommendation:
+
+- **Safe to merge** — no significant capability expansion
+- **Review recommended** — moderate changes worth a closer look
+- **Manual approval required** — the PR introduces meaningful new agent power
+
+MCP Reviewer works as a **GitHub Actions workflow** that posts comments on pull requests, and as a **CLI** for local testing.
+
 ## See It in Action
 
 Every example below is a **real PR** in this repo with a **real bot comment** — click through to see them live.
@@ -65,18 +77,6 @@ Adding a shell executor (arbitrary commands) and a Stripe billing server:
 > | added | `stripe-billing` | Sensitive System Access | Billing / payments, Identity / authentication |
 >
 > **Reasons:** Introduces execute capability · Affects sensitive systems: Billing / payments, Identity / authentication
-
----
-
-## What is MCP Reviewer?
-
-MCP Reviewer analyzes MCP configuration changes and produces a clear recommendation:
-
-- **Safe to merge** — no significant capability expansion
-- **Review recommended** — moderate changes worth a closer look
-- **Manual approval required** — the PR introduces meaningful new agent power
-
-MCP Reviewer works as a **GitHub Actions workflow** that posts comments on pull requests, and as a **CLI** for local testing.
 
 ---
 
