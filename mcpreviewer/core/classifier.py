@@ -31,7 +31,8 @@ CAPABILITY_KEYWORDS: dict[Capability, list[str]] = {
     Capability.EXECUTE: [
         "run_", "exec_", "execute_", "invoke_", "deploy_",
         "launch_", "start_", "trigger_",
-        "execute", "invoke", "deploy", "spawn",
+        "execute", "executor", "invoke", "deploy", "spawn",
+        "shell", "sudo", "bash", "powershell", "cmd.exe",
     ],
     Capability.ADMIN: [
         "configure_", "admin_", "manage_", "grant_", "revoke_",

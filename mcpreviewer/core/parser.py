@@ -91,8 +91,8 @@ def _extract_tools(data: dict) -> list[ToolDefinition]:
             )
         return tools
 
-    # Format A – mcpServers style
-    servers = data.get("mcpServers")
+    # Format A – mcpServers / servers style
+    servers = data.get("mcpServers") or data.get("servers")
     if isinstance(servers, dict):
         for server_name, server_cfg in servers.items():
             if not isinstance(server_cfg, dict):
@@ -104,9 +104,13 @@ def _extract_tools(data: dict) -> list[ToolDefinition]:
                 desc_parts.append(f"command={cmd}")
             if args:
                 desc_parts.append(f"args={args}")
-            env_keys = list((server_cfg.get("env") or {}).keys())
+            env = server_cfg.get("env") or {}
+            env_keys = list(env.keys())
             if env_keys:
                 desc_parts.append(f"env_keys={env_keys}")
+            # Include env values in description for capability detection
+            for key, val in env.items():
+                desc_parts.append(f"{key}={val}")
             tools.append(
                 ToolDefinition(
                     name=str(server_name),
