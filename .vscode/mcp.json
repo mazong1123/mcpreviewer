@@ -5,6 +5,17 @@
       "command": "python",
       "args": ["-m", "mcpreviewer.mcp_server"],
       "env": {}
+    },
+    "slack-notifications": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@anthropic/slack-mcp-server"],
+      "env": {
+        "SLACK_BOT_TOKEN": "xoxb-your-token",
+        "SLACK_CHANNEL": "#engineering",
+        "ALLOW_SEND_MESSAGE": "true",
+        "ALLOW_SEND_DM": "true"
+      }
     }
   }
 }
