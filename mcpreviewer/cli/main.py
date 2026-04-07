@@ -88,6 +88,8 @@ def _git_changed_files(repo: Path, base: str, head: str) -> list[str]:
         cwd=repo,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if result.returncode != 0:
         result = subprocess.run(
@@ -95,6 +97,8 @@ def _git_changed_files(repo: Path, base: str, head: str) -> list[str]:
             cwd=repo,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
         )
     if result.returncode != 0:
         click.echo(f"Error running git diff: {result.stderr}", err=True)
@@ -108,6 +112,8 @@ def _git_show(repo: Path, ref: str, file_path: str) -> str | None:
         cwd=repo,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if result.returncode != 0:
         return None
